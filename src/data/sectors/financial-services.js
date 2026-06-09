@@ -1,0 +1,15 @@
+export const FINANCIAL_SERVICES = {
+  id: 'financial-services',
+  name: 'Financial Services',
+  detection_signals: ['invest', 'loan', 'mortgage', 'credit', 'finance', 'trading', 'fund', 'pension', 'insurance', 'financial advice'],
+  checks: [
+    { id: 'fca_authorisation', label: 'FCA authorisation displayed', severity: 'high', law: 'FSMA 2000 s.21', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'If the site offers regulated financial products/services, it must display FCA authorisation. Look for: "FCA regulated", "FCA authorised", an FCA firm reference number, or a link to the FCA register.' },
+    { id: 'financial_promotion_approval', label: 'Financial promotions approved', severity: 'high', law: 'Financial Promotions Order 2005 FSMA 2000 s.21', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'Unregulated firms promoting financial products must have promotions approved by an FCA authorised firm. Look for approver identification.' },
+    { id: 'risk_warnings', label: 'Risk warnings & disclaimers present', severity: 'high', law: 'Financial Promotions Order 2005 / FCA COBS rules', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'Investment promotions must include risk warnings. Look for: "past performance is not a guarantee", "capital at risk", "you may lose money".' },
+    { id: 'consumer_duty_fair_value', label: 'Fair value & consumer understanding disclosed', severity: 'medium', law: 'FCA Consumer Duty 2023', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'The site should explain product benefits, costs, and who the product is suitable for. Look for KID, KFIS, cost breakdowns, or suitability criteria.' },
+    { id: 'credit_agreement_disclosure', label: 'Credit agreement terms transparent', severity: 'high', law: 'Consumer Credit Act 1974 / FCA CONC rules', category: 'sector_specific', jurisdictions: ['uk'], conditional: true, condition_flag: 'takes_payments', guidance: 'If offering credit/finance, display all terms before application: APR, representative APR, payment schedule, cancellation rights.' },
+    { id: 'data_security_financial', label: 'Data security & encryption statement', severity: 'high', law: 'UK GDPR Art. 32 / FSMA 2000', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'Financial sites must mention security measures. Look for: "SSL encrypted", "256-bit encryption", "two-factor authentication".' },
+    { id: 'complaints_procedure', label: 'Complaints procedure published', severity: 'medium', law: 'FCA COBS 2.1R', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'The site must explain how customers can complain and reference the Financial Ombudsman Service.' },
+    { id: 'financial_ombudsman', label: 'Financial Ombudsman Service details', severity: 'medium', law: 'FSMA 2000 / FOS membership', category: 'sector_specific', jurisdictions: ['uk'], guidance: 'Regulated firms must disclose FOS contact details and eligibility. Look for FOS address, phone number, or website link.' }
+  ]
+};

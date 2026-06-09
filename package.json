@@ -1,19 +1,25 @@
 {
   "name": "uk-compliance-checker",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "build:data": "tsc src/data/*.ts src/data/sectors/*.ts --outDir src/data/compiled --esModuleInterop --declaration false",
+    "deploy": "cd infrastructure && sam build && sam deploy --guided"
   },
   "dependencies": {
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.0.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5"
+    "@netlify/plugin-nextjs": "^5",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }

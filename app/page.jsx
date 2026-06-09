@@ -4,9 +4,9 @@ import { useState, useRef } from "react";
 import styles from "./page.module.css";
 
 const EXAMPLES = [
-  { label: "Savills",      url: "https://www.savills.co.uk" },
-  { label: "Foxtons",      url: "https://www.foxtons.co.uk" },
-  { label: "Purplebricks", url: "https://www.purplebricks.co.uk" },
+  { label: 'Moonpig',      url: 'https://www.moonpig.com' },
+  { label: 'Monzo',        url: 'https://monzo.com' },
+  { label: 'Purplebricks', url: 'https://www.purplebricks.co.uk' },
 ];
 
 const SEVERITY = {
@@ -140,7 +140,7 @@ export default function ComplianceChecker() {
     setGroups(initial);
 
     try {
-      const res = await fetch("/api/audit", {
+      const res = await fetch(process.env.NEXT_PUBLIC_AUDIT_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: u }),
@@ -171,6 +171,8 @@ export default function ComplianceChecker() {
 
           if (chunk.type === "meta") {
             setMeta(chunk);
+          } else if (chunk.type === "classified") {
+            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name }));
           } else if (chunk.type === "group") {
             setGroups(prev => ({
               ...prev,
@@ -214,7 +216,7 @@ export default function ComplianceChecker() {
           <h1 className={styles.heading}>Website compliance checker</h1>
           <p className={styles.subheading}>
             Full UK legal audit — GDPR, PECR, Companies Act, Consumer Rights Act, and more.
-            36 checks across 6 categories. Results in under a minute.
+            Up to 260 checks across 21 industry categories. Results in under a minute.
           </p>
         </div>
 
@@ -274,6 +276,9 @@ export default function ComplianceChecker() {
 
               <div className={styles.scoreInfo}>
                 <p className={styles.siteName}>{meta?.site_name || url}</p>
+                {meta?.sector_name && (
+                  <span className={styles.sectorBadge}>{meta.sector_name}</span>
+                )}
 
                 {score ? (
                   <div className={styles.scoreCounts}>

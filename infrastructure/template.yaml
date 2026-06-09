@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    MemorySize: 512
+    Timeout: 300
+    Environment:
+      Variables:
+        BEDROCK_REGION: eu-west-2
+        REQUIRE_PAYMENT: 'false'
+        ALLOWED_ORIGIN: 'https://compliance.ishsitotombe.co.uk'
+
+Resources:
+  ComplianceAuditFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/lambda/
+      Handler: handler.handler
+      Policies:
+        - AmazonBedrockFullAccess
+      Events:
+        AuditPost:
+          Type: HttpApi
+          Properties:
+            Path: /audit
+            Method: POST
+        AuditOptions:
+          Type: HttpApi
+          Properties:
+            Path: /audit
+            Method: OPTIONS
+
+Outputs:
+  AuditApiUrl:
+    Description: 'API Gateway endpoint URL'
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/audit'
