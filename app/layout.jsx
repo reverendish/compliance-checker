@@ -2,8 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "UK Compliance Checker — ishsitotombe.co.uk",
-  description:
-    "Instant audit of any UK website against GDPR, PECR, and consumer law. Not legal advice.",
+  description: "Full UK legal audit — GDPR, PECR, Companies Act, Consumer Rights Act, and more. 36 checks across 6 categories.",
 };
 
 export default function RootLayout({ children }) {

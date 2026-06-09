@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import styles from "./page.module.css";
 
 const EXAMPLES = [
@@ -10,63 +10,52 @@ const EXAMPLES = [
 ];
 
 const SEVERITY = {
-  high:   { label: "High risk",   cls: "sevHigh"   },
-  medium: { label: "Medium risk", cls: "sevMedium"  },
-  low:    { label: "Low risk",    cls: "sevLow"     },
+  high:   { label: "High",   cls: "sevHigh"   },
+  medium: { label: "Medium", cls: "sevMedium" },
+  low:    { label: "Low",    cls: "sevLow"    },
 };
 
-const LOADING_STEPS = [
-  "Fetching page…",
-  "Checking cookie consent…",
-  "Scanning legal disclosures…",
-  "Auditing company information…",
-  "Calculating compliance score…",
-];
+const GROUP_META = {
+  data_protection:  { icon: "🔒", label: "Data Protection & Privacy" },
+  security_company: { icon: "🏢", label: "Security & Company Info" },
+  consumer_law:     { icon: "⚖️",  label: "Consumer Law" },
+  marketing:        { icon: "📣", label: "Marketing & Advertising" },
+  accessibility:    { icon: "♿", label: "Accessibility" },
+  sector_specific:  { icon: "🏷️",  label: "Sector-Specific" },
+};
 
 function ScoreRing({ score }) {
   const r = 44;
   const circ = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(100, score));
+  const pct  = Math.max(0, Math.min(100, score));
   const dash = (pct / 100) * circ;
   const color = pct >= 70 ? "#1a7a4a" : pct >= 40 ? "#b45309" : "#b91c1c";
-
   return (
     <svg width="112" height="112" style={{ flexShrink: 0 }}>
       <circle cx="56" cy="56" r={r} fill="none" stroke="#e2e0db" strokeWidth="7" />
-      <circle
-        cx="56" cy="56" r={r}
-        fill="none" stroke={color} strokeWidth="7"
-        strokeDasharray={`${dash} ${circ - dash}`}
-        strokeLinecap="round"
+      <circle cx="56" cy="56" r={r} fill="none" stroke={color} strokeWidth="7"
+        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
         transform="rotate(-90 56 56)"
         style={{ transition: "stroke-dasharray 0.6s ease" }}
       />
-      <text x="56" y="52" textAnchor="middle" fontSize="26" fontWeight="600" fill={color} fontFamily="-apple-system, sans-serif">
-        {Math.round(pct)}
-      </text>
-      <text x="56" y="68" textAnchor="middle" fontSize="11" fill="#6b6860" fontFamily="-apple-system, sans-serif">
-        / 100
-      </text>
+      <text x="56" y="52" textAnchor="middle" fontSize="26" fontWeight="600" fill={color} fontFamily="-apple-system, sans-serif">{Math.round(pct)}</text>
+      <text x="56" y="68" textAnchor="middle" fontSize="11" fill="#6b6860"   fontFamily="-apple-system, sans-serif">/ 100</text>
     </svg>
   );
 }
 
-function CheckCard({ check, delay }) {
+function CheckRow({ check, delay }) {
   const pass = check.pass;
+  let statusCls, statusIcon, borderColor;
+  if (pass === true)       { statusCls = "statusPass"; statusIcon = "✓"; borderColor = "#1a7a4a"; }
+  else if (pass === false) { statusCls = "statusFail"; statusIcon = "✗"; borderColor = "#b91c1c"; }
+  else                     { statusCls = "statusNa";   statusIcon = "—"; borderColor = "#d1d5db"; }
+
   const sev = SEVERITY[check.severity] || SEVERITY.low;
 
-  let statusCls, statusIcon, borderColor;
-  if (pass === true)  { statusCls = "statusPass"; statusIcon = "✓"; borderColor = "#1a7a4a"; }
-  else if (pass === false) { statusCls = "statusFail"; statusIcon = "✗"; borderColor = "#b91c1c"; }
-  else                { statusCls = "statusNa";   statusIcon = "—"; borderColor = "#d1d5db"; }
-
   return (
-    <div
-      className={`${styles.checkCard} fade-up`}
-      style={{ borderLeftColor: borderColor, animationDelay: `${delay}ms` }}
-    >
+    <div className={`${styles.checkRow} fade-up`} style={{ borderLeftColor: borderColor, animationDelay: `${delay}ms` }}>
       <div className={`${styles.statusDot} ${styles[statusCls]}`}>{statusIcon}</div>
-
       <div className={styles.checkBody}>
         <div className={styles.checkHeader}>
           <span className={styles.checkLabel}>{check.label}</span>
@@ -74,59 +63,145 @@ function CheckCard({ check, delay }) {
         </div>
         <p className={styles.checkExplanation}>{check.explanation}</p>
       </div>
-
       <span className={`${styles.sevBadge} ${styles[sev.cls]}`}>{sev.label}</span>
     </div>
   );
 }
 
+function GroupSection({ groupId, checks, isLoading, isError, errorMessage }) {
+  const meta  = GROUP_META[groupId] || { icon: "•", label: groupId };
+  const passed = checks.filter(c => c.pass === true).length;
+  const failed = checks.filter(c => c.pass === false).length;
+  const na     = checks.filter(c => c.pass === null).length;
+
+  return (
+    <div className={styles.groupSection}>
+      <div className={styles.groupHeader}>
+        <span className={styles.groupIcon}>{meta.icon}</span>
+        <span className={styles.groupLabel}>{meta.label}</span>
+        {isLoading && <span className={styles.groupSpinner} />}
+        {!isLoading && !isError && checks.length > 0 && (
+          <div className={styles.groupCounts}>
+            {failed > 0 && <span className={styles.gcFail}>{failed} failed</span>}
+            {passed > 0 && <span className={styles.gcPass}>{passed} passed</span>}
+            {na > 0     && <span className={styles.gcNa}>{na} n/a</span>}
+          </div>
+        )}
+        {isError && <span className={styles.groupErrorBadge}>error</span>}
+      </div>
+
+      {isError && (
+        <p className={styles.groupErrorMsg}>⚠ {errorMessage}</p>
+      )}
+
+      {checks.length > 0 && (
+        <div className={styles.checkList}>
+          {checks.map((c, i) => <CheckRow key={c.id} check={c} delay={i * 35} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const GROUP_ORDER = ["data_protection", "security_company", "consumer_law", "marketing", "accessibility", "sector_specific"];
+
 export default function ComplianceChecker() {
   const [url, setUrl]         = useState("");
   const [loading, setLoading] = useState(false);
-  const [stepIdx, setStepIdx] = useState(0);
-  const [results, setResults] = useState(null);
+  const [meta, setMeta]       = useState(null);          // { site_name, total_checks, js_shell, … }
+  const [groups, setGroups]   = useState({});            // { groupId: { checks, done, error } }
+  const [score, setScore]     = useState(null);          // { overall_score, critical_count }
   const [error, setError]     = useState(null);
+  const abortRef = useRef(null);
+
+  const reset = () => {
+    abortRef.current?.abort();
+    setMeta(null); setGroups({}); setScore(null); setError(null); setUrl("");
+  };
 
   const audit = async (target) => {
     let u = (target || url).trim();
     if (!u) return;
     if (!u.startsWith("http")) u = "https://" + u;
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
-    setResults(null);
-    setStepIdx(0);
+    setMeta(null);
+    setScore(null);
     if (target) setUrl(u);
 
-    let i = 0;
-    const iv = setInterval(() => { i = (i + 1) % LOADING_STEPS.length; setStepIdx(i); }, 2400);
+    // Pre-populate all groups as loading
+    const initial = {};
+    GROUP_ORDER.forEach(id => { initial[id] = { checks: [], done: false, error: null }; });
+    setGroups(initial);
 
     try {
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: u }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setResults(data);
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Something went wrong.");
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // keep incomplete last line
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let chunk;
+          try { chunk = JSON.parse(line); } catch { continue; }
+
+          if (chunk.type === "meta") {
+            setMeta(chunk);
+          } else if (chunk.type === "group") {
+            setGroups(prev => ({
+              ...prev,
+              [chunk.group_id]: { checks: chunk.checks, done: true, error: null },
+            }));
+          } else if (chunk.type === "group_error") {
+            setGroups(prev => ({
+              ...prev,
+              [chunk.group_id]: { checks: [], done: true, error: chunk.message },
+            }));
+          } else if (chunk.type === "done") {
+            setScore({ overall_score: chunk.overall_score, critical_count: chunk.critical_count });
+          }
+        }
+      }
     } catch (e) {
-      setError(e.message || "Something went wrong. Please try again.");
+      if (e.name !== "AbortError") setError(e.message || "Something went wrong. Please try again.");
     } finally {
-      clearInterval(iv);
       setLoading(false);
     }
   };
 
-  const reset = () => { setResults(null); setUrl(""); setError(null); };
-
-  const passed   = results?.checks.filter(c => c.pass === true).length  ?? 0;
-  const failed   = results?.checks.filter(c => c.pass === false).length ?? 0;
-  const na       = results?.checks.filter(c => c.pass === null).length  ?? 0;
+  const allChecks    = Object.values(groups).flatMap(g => g.checks);
+  const totalPassed  = allChecks.filter(c => c.pass === true).length;
+  const totalFailed  = allChecks.filter(c => c.pass === false).length;
+  const totalNa      = allChecks.filter(c => c.pass === null).length;
+  const groupsDone   = Object.values(groups).filter(g => g.done).length;
+  const hasAnyResult = allChecks.length > 0;
 
   return (
     <main className={styles.main}>
-      {/* Nav */}
       <nav className={styles.nav}>
         <a href="https://ishsitotombe.co.uk" className={styles.navBrand}>ish.</a>
         <a href="https://ishsitotombe.co.uk/#contact" className={styles.navCta}>Get in touch</a>
@@ -138,12 +213,12 @@ export default function ComplianceChecker() {
           <span className={styles.tag}>Free tool · UK compliance</span>
           <h1 className={styles.heading}>Website compliance checker</h1>
           <p className={styles.subheading}>
-            Instant audit against GDPR, PECR, and consumer law.
-            Paste any UK website URL — results in under a minute.
+            Full UK legal audit — GDPR, PECR, Companies Act, Consumer Rights Act, and more.
+            36 checks across 6 categories. Results in under a minute.
           </p>
         </div>
 
-        {/* Input card */}
+        {/* Input */}
         <div className={styles.inputCard}>
           <div className={styles.inputRow}>
             <span className={styles.inputIcon}>↗</span>
@@ -153,7 +228,7 @@ export default function ComplianceChecker() {
               value={url}
               onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === "Enter" && audit()}
-              placeholder="https://yourestatevagent.co.uk"
+              placeholder="https://yourbusiness.co.uk"
               disabled={loading}
             />
             <button
@@ -161,39 +236,21 @@ export default function ComplianceChecker() {
               onClick={() => audit()}
               disabled={loading || !url.trim()}
             >
-              {loading ? (
-                <span className={styles.spinner} aria-hidden="true" />
-              ) : (
-                "Run audit"
-              )}
+              {loading ? <span className={styles.spinner} aria-hidden="true" /> : "Run audit"}
             </button>
           </div>
 
-          {/* Examples */}
-          {!results && !loading && (
+          {!hasAnyResult && !loading && (
             <div className={styles.examples}>
-              <span className={styles.examplesLabel}>Estate agent examples:</span>
+              <span className={styles.examplesLabel}>Try an example:</span>
               {EXAMPLES.map(ex => (
-                <button
-                  key={ex.url}
-                  className={styles.exampleBtn}
-                  onClick={() => audit(ex.url)}
-                >
+                <button key={ex.url} className={styles.exampleBtn} onClick={() => audit(ex.url)}>
                   {ex.label}
                 </button>
               ))}
             </div>
           )}
         </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className={styles.loadingCard}>
-            <div className={styles.loadingSpinner} />
-            <p className={styles.loadingStep}>{LOADING_STEPS[stepIdx]}</p>
-            <p className={styles.loadingNote}>Fetching and analysing — usually 20–40 seconds</p>
-          </div>
-        )}
 
         {/* Error */}
         {error && (
@@ -203,64 +260,89 @@ export default function ComplianceChecker() {
           </div>
         )}
 
-        {/* Results */}
-        {results && (
-          <div className={`${styles.results} fade-up`}>
+        {/* Results area */}
+        {(loading || hasAnyResult) && (
+          <div className={styles.results}>
+
             {/* Score header */}
             <div className={styles.scoreCard}>
-              <ScoreRing score={results.overall_score} />
+              {score ? (
+                <ScoreRing score={score.overall_score} />
+              ) : (
+                <div className={styles.scoreRingPlaceholder} />
+              )}
 
               <div className={styles.scoreInfo}>
-                <p className={styles.siteName}>{results.site_name}</p>
-                <div className={styles.scoreCounts}>
-                  <span className={styles.countPass}>{passed} passed</span>
-                  <span className={styles.countFail}>{failed} failed</span>
-                  {na > 0 && <span className={styles.countNa}>{na} n/a</span>}
-                  {results.critical_count > 0 && (
-                    <span className={styles.critBadge}>
-                      {results.critical_count} critical
-                    </span>
-                  )}
-                </div>
+                <p className={styles.siteName}>{meta?.site_name || url}</p>
+
+                {score ? (
+                  <div className={styles.scoreCounts}>
+                    <span className={styles.countPass}>{totalPassed} passed</span>
+                    <span className={styles.countFail}>{totalFailed} failed</span>
+                    {totalNa > 0 && <span className={styles.countNa}>{totalNa} n/a</span>}
+                    {score.critical_count > 0 && (
+                      <span className={styles.critBadge}>{score.critical_count} critical</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className={styles.progressLabel}>
+                    {groupsDone} of {GROUP_ORDER.length} categories checked
+                    {meta?.total_checks ? ` · ${allChecks.length} / ${meta.total_checks} checks` : ""}
+                  </p>
+                )}
               </div>
 
-              <button className={styles.resetBtn} onClick={reset}>New audit</button>
+              {hasAnyResult && (
+                <button className={styles.resetBtn} onClick={reset}>New audit</button>
+              )}
             </div>
 
-            {/* JS-shell / fetch warnings */}
-            {(results._warning || results._fetchWarning) && (
+            {/* Warnings */}
+            {meta?.js_shell && (
               <div className={styles.warningCard}>
                 <span className={styles.warningIcon}>⚠</span>
-                <p>{results._warning || results._fetchWarning}</p>
+                <p>{meta.js_shell_reason}</p>
+              </div>
+            )}
+            {meta?.fetch_warning && (
+              <div className={styles.warningCard}>
+                <span className={styles.warningIcon}>⚠</span>
+                <p>{meta.fetch_warning}</p>
               </div>
             )}
 
-            {/* Check cards */}
-            <div className={styles.checks}>
-              {results.checks.map((check, i) => (
-                <CheckCard key={check.id} check={check} delay={i * 45} />
-              ))}
+            {/* Group sections */}
+            <div className={styles.groupList}>
+              {GROUP_ORDER.map(groupId => {
+                const g = groups[groupId];
+                if (!g) return null;
+                return (
+                  <GroupSection
+                    key={groupId}
+                    groupId={groupId}
+                    checks={g.checks}
+                    isLoading={!g.done}
+                    isError={!!g.error}
+                    errorMessage={g.error}
+                  />
+                );
+              })}
             </div>
 
-            {/* Footer CTA */}
-            <div className={styles.footer}>
-              <div className={styles.footerDisclaimer}>
-                <strong>Limitations:</strong> This scans publicly visible content only —
-                it cannot execute JavaScript, verify actual cookie behaviour, or
-                inspect backend systems. This is not legal advice.
+            {/* Footer CTA — only once all done */}
+            {score && (
+              <div className={`${styles.footer} fade-up`}>
+                <div className={styles.footerDisclaimer}>
+                  <strong>Limitations:</strong> This scans publicly visible HTML only — it cannot execute JavaScript, verify actual cookie behaviour, or inspect backend systems. Results are indicative, not legal advice.
+                </div>
+                <div className={styles.footerCta}>
+                  <p>Issues found on <strong>{meta?.site_name}</strong>? I can fix them.</p>
+                  <a href="https://ishsitotombe.co.uk/#contact" className={styles.ctaBtn} target="_blank" rel="noopener noreferrer">
+                    Get in touch →
+                  </a>
+                </div>
               </div>
-              <div className={styles.footerCta}>
-                <p>Issues found on <strong>{results.site_name}</strong>? I can fix them.</p>
-                <a
-                  href="https://ishsitotombe.co.uk/#contact"
-                  className={styles.ctaBtn}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Get in touch →
-                </a>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>
