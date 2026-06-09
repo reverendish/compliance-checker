@@ -4,10 +4,12 @@ A portfolio tool for [ishsitotombe.co.uk](https://ishsitotombe.co.uk) — paste 
 
 ## Stack
 
-- **Next.js 14** (App Router)
-- **DeepSeek API** (`deepseek-chat`) with JSON mode — fast and cheap
+- **Next.js 14** (App Router) — frontend
+- **AWS Lambda** — serverless backend (300s timeout, 512MB memory, eu-west-2)
+- **AWS Bedrock** — AI models (Sonnet 4.6 for classification, Nova Pro for compliance checks)
 - **Cheerio** for server-side HTML parsing
-- No database, no auth, no external services beyond DeepSeek
+- **Companies House API** for business lookup (proxied via Lambda)
+- No database, no auth, no self-hosted servers
 
 ## Setup
 
@@ -17,21 +19,25 @@ A portfolio tool for [ishsitotombe.co.uk](https://ishsitotombe.co.uk) — paste 
 npm install
 ```
 
-### 2. Add your DeepSeek API key
+### 2. Deploy Lambda backend
 
-Copy `.env.local.example` to `.env.local` and fill in your key:
+The compliance checker requires AWS Lambda + Bedrock for the audit engine. Deploy once:
 
 ```bash
-cp .env.local.example .env.local
+cd infrastructure
+sam build
+sam deploy --guided --stack-name ish-compliance-checker --region eu-west-2
 ```
 
-Get a key at [platform.deepseek.com](https://platform.deepseek.com).
+Copy the `AuditApiUrl` from the CloudFormation outputs.
 
 ### 3. Run locally
 
 ```bash
-npm run dev
+NEXT_PUBLIC_AUDIT_API_URL=https://your-api-id.execute-api.eu-west-2.amazonaws.com npm run dev
 ```
+
+Replace `your-api-id` with the URL from step 2.
 
 Visit [http://localhost:3000](http://localhost:3000).
 
@@ -44,9 +50,13 @@ npm start
 
 ## Deploy to Netlify
 
-This is the recommended deploy target. A `netlify.toml` is already included.
+The frontend is deployed to Netlify. A `netlify.toml` is already included.
 
-### Option A — Netlify CLI
+### 1. Deploy Lambda backend first
+
+See "Setup" section above. You need the AWS API Gateway URL.
+
+### 2. Deploy frontend to Netlify
 
 ```bash
 npm install -g netlify-cli
@@ -55,18 +65,15 @@ netlify init        # link to a new or existing site
 netlify deploy --prod
 ```
 
-### Option B — Netlify dashboard (drag & drop)
-
-1. `npm run build`
-2. Go to [app.netlify.com](https://app.netlify.com) → drag the `.next` folder onto the deploy zone
-
-### Set environment variable
+### 3. Set environment variable
 
 In **Site settings → Environment variables**, add:
 
 ```
-DEEPSEEK_API_KEY = your_key_here
+NEXT_PUBLIC_AUDIT_API_URL = https://your-api-id.execute-api.eu-west-2.amazonaws.com
 ```
+
+Then redeploy.
 
 ### Custom subdomain
 
@@ -75,35 +82,49 @@ In Netlify → **Domain management**, add `compliance.ishsitotombe.co.uk` as a c
 
 ## What it checks
 
-| Check | Law | Severity |
-|---|---|---|
-| Cookie consent banner | PECR 2003 | High |
-| Privacy policy | UK GDPR Art. 13 | High |
-| Cookie policy | PECR 2003 | Medium |
-| HTTPS / SSL | UK GDPR Art. 32 | High |
-| Company information | Companies Act 2006 s.82 | Medium |
-| Terms & conditions | Consumer Rights Act 2015 | Medium |
-| Refund / returns policy | Consumer Rights Act 2015 | Medium |
-| Accessibility basics | Equality Act 2010 | Low |
-| VAT number | VAT Act 1994 | Low |
-| Review platform disclosure | CAP Code / CMA 2024 | Low |
+**260+ compliance checks** across 21 industry sectors:
+
+- **Universal (20 checks):** GDPR, PECR, accessibility, company info, consumer law, marketing
+- **E-Commerce & Retail (10 checks):** Cancellation rights, delivery, refunds, drip pricing, product safety
+- **Financial Services (8 checks):** FCA authorisation, risk warnings, consumer duty, credit terms
+- **Healthcare (7 checks):** CQC registration, medicine advertising, health claims, professional registration
+- **Legal Services (8 checks):** SRA authorisation, complaints, costs transparency, client money
+- **Estate & Letting Agents (15 checks):** Ombudsman membership, AML policy, deposit schemes, tenant fees
+- **Food & Beverage (7 checks):** Allergen info, FSA registration, calorie labelling, nutrition claims
+- **Gambling (8 checks):** Gambling Commission licence, GamStop, safer gambling tools, age verification
+- **Travel & Tourism (7 checks):** ATOL protection, ABTA, package info, cancellation policy
+- **Charities (8 checks):** Charity number, trustee transparency, gift aid, financial accounts
+- **Construction & Trades (8 checks):** Gas Safe, NICEIC, public liability, competent person schemes
+- **Insurance (7 checks):** FCA authorisation, IPIDs, IPT disclosure, claims process
+- **Accountancy (7 checks):** Professional membership, AML policy, HMRC registration, client money
+- **Childcare & Education (8 checks):** Ofsted registration, safeguarding, DBS checks, EYFS compliance
+- **Recruitment (7 checks):** Employment Agencies Act, AWR compliance, REC membership, fee transparency
+- **Pharmaceuticals (7 checks):** MHRA logo, GPhC registration, prescription rules, medicine safety
+- **Cosmetics (7 checks):** Responsible person, SCPN notification, ingredient labelling, safety assessment
+- **Age-Restricted (7 checks):** Age verification, Challenge 25, delivery policy, health warnings
+- **Automotive (7 checks):** FCA finance, 30-day rejection, disclosure, distance selling
+- **SaaS & Software (8 checks):** DPA, cancellation, uptime SLA, data portability, AI transparency
+- **Media & Publishing (7 checks):** IPSO membership, corrections, copyright, editorial standards
 
 ## Limitations (shown in the UI)
 
-- Scans publicly visible HTML only — JS-rendered content (like many cookie banners) may not be detected
-- Cannot verify actual data processing practices
-- Not legal advice
+- Scans publicly visible HTML only — JS-rendered content (React/Vue/Next.js) may not be fully detected
+- Cannot verify actual backend data practices or contract terms
+- Not legal advice — consult a solicitor for compliance disputes
+- Results are indicative, not definitive
 
-## Upgrade path
+## Performance
 
-To detect JS-rendered cookie banners properly, replace the `fetch()` in the API route with a Puppeteer call:
+- **Typical audit**: 30–60 seconds
+- **Lambda timeout**: 300 seconds (5 minutes)
+- **Lambda memory**: 512 MB
+- **Region**: eu-west-2 (London)
 
-```js
-const browser = await puppeteer.launch();
-const page = await browser.newPage();
-await page.goto(targetUrl, { waitUntil: "networkidle2" });
-const html = await page.content();
-await browser.close();
-```
+## Cost (AWS)
 
-Add `puppeteer` to your dependencies and deploy to a host that supports it (Railway, Render, or a VPS — not Vercel's default edge runtime).
+Per audit (typical):
+- Lambda: ~$0.0001 (negligible)
+- Bedrock: ~$0.005 (Sonnet classification + Nova check batching)
+- Data transfer: free (within AWS region)
+
+**Estimated cost**: $0.005 per audit + $0.50/month Lambda baseline
