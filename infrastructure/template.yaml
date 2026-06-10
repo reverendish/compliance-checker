@@ -23,16 +23,6 @@ Resources:
         - AmazonBedrockFullAccess
       FunctionUrlConfig:
         AuthType: NONE
-        Cors:
-          AllowOrigins:
-            - 'https://compliance.ishsitotombe.co.uk'
-            - 'https://ishsitotombe.co.uk'
-            - 'https://www.ishsitotombe.co.uk'
-          AllowMethods:
-            - POST
-          AllowHeaders:
-            - content-type
-          MaxAge: 86400
 
 Outputs:
   AuditFunctionUrl:
