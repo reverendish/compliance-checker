@@ -83,6 +83,7 @@ export async function scrape(targetUrl) {
 
   return {
     html,
+    targetUrl,
     pageText,
     pageLinks,
     headings,
