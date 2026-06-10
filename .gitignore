@@ -15,3 +15,9 @@ out/
 .DS_Store
 *.pem
 repomix-output.xml
+
+# security — credentials and data exports
+*credentials*.csv
+*credentials*.json
+*credentials*.env
+*.csv
