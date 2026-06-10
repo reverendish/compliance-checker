@@ -106,7 +106,8 @@ export const handler = async (event) => {
       sector: classification.primary_sector,
       sector_name: manifest.sector_name,
       flags: classification.flags,
-      total_checks: manifest.total
+      total_checks: manifest.total,
+      batch_ids: manifest.batches.map(b => b.category_id),
     }) + '\n';
 
     // 5. Run batches in parallel, stream each as it completes

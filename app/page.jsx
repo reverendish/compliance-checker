@@ -134,10 +134,8 @@ export default function ComplianceChecker() {
     setScore(null);
     if (target) setUrl(u);
 
-    // Pre-populate all groups as loading
-    const initial = {};
-    GROUP_ORDER.forEach(id => { initial[id] = { checks: [], done: false, error: null }; });
-    setGroups(initial);
+    // Groups are initialised when the 'classified' chunk arrives with batch_ids
+    setGroups({});
 
     try {
       const res = await fetch(process.env.NEXT_PUBLIC_AUDIT_API_URL, {
@@ -172,7 +170,13 @@ export default function ComplianceChecker() {
           if (chunk.type === "meta") {
             setMeta(chunk);
           } else if (chunk.type === "classified") {
-            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name }));
+            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name, batch_ids: chunk.batch_ids }));
+            // Initialise exactly the groups that will run
+            if (chunk.batch_ids?.length) {
+              const initial = {};
+              chunk.batch_ids.forEach(id => { initial[id] = { checks: [], done: false, error: null }; });
+              setGroups(initial);
+            }
           } else if (chunk.type === "group") {
             setGroups(prev => ({
               ...prev,
@@ -200,7 +204,8 @@ export default function ComplianceChecker() {
   const totalFailed  = allChecks.filter(c => c.pass === false).length;
   const totalNa      = allChecks.filter(c => c.pass === null).length;
   const groupsDone   = Object.values(groups).filter(g => g.done).length;
-  const hasAnyResult = allChecks.length > 0;
+  const groupsTotal  = Object.keys(groups).length;
+  const hasAnyResult = allChecks.length > 0 || groupsDone > 0;
 
   return (
     <main className={styles.main}>
@@ -291,7 +296,7 @@ export default function ComplianceChecker() {
                   </div>
                 ) : (
                   <p className={styles.progressLabel}>
-                    {groupsDone} of {GROUP_ORDER.length} categories checked
+                    {groupsDone} of {groupsTotal || '…'} categories checked
                     {meta?.total_checks ? ` · ${allChecks.length} / ${meta.total_checks} checks` : ""}
                   </p>
                 )}
