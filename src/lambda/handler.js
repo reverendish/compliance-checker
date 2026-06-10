@@ -5,14 +5,33 @@ import { buildManifest } from './manifest.js';
 import { auditBatch } from './auditor.js';
 import { calculateScore } from './scorer.js';
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://compliance.ishsitotombe.co.uk';
+const ALLOWED_ORIGINS = new Set([
+  'https://compliance.ishsitotombe.co.uk',
+  'https://ishsitotombe.co.uk',
+  'https://www.ishsitotombe.co.uk',
+]);
+
+function corsHeaders(requestOrigin) {
+  const origin = ALLOWED_ORIGINS.has(requestOrigin)
+    ? requestOrigin
+    : 'https://compliance.ishsitotombe.co.uk';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Cache-Control': 'no-cache',
+    'Vary': 'Origin',
+  };
+}
 
 export const handler = async (event) => {
+  const requestOrigin = event.headers?.origin || event.headers?.Origin || '';
+
   // Handle CORS preflight
   if (event.requestContext?.http?.method === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: corsHeaders(),
+      headers: corsHeaders(requestOrigin),
       body: ''
     };
   }
@@ -21,12 +40,12 @@ export const handler = async (event) => {
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
-    return errorResponse(400, 'Invalid JSON body.');
+    return errorResponse(400, 'Invalid JSON body.', requestOrigin);
   }
 
   const { url } = body;
   if (!url || typeof url !== 'string') {
-    return errorResponse(400, 'A valid URL is required.');
+    return errorResponse(400, 'A valid URL is required.', requestOrigin);
   }
 
   let targetUrl = url.trim();
@@ -36,7 +55,7 @@ export const handler = async (event) => {
   try {
     validateUrl(targetUrl);
   } catch (e) {
-    return errorResponse(400, e.message);
+    return errorResponse(400, e.message, requestOrigin);
   }
 
   // Payment gate (disabled)
@@ -129,7 +148,7 @@ export const handler = async (event) => {
   return {
     statusCode: 200,
     headers: {
-      ...corsHeaders(),
+      ...corsHeaders(requestOrigin),
       'Content-Type': 'text/plain; charset=utf-8',
       'X-Accel-Buffering': 'no'
     },
@@ -145,19 +164,10 @@ function validateUrl(url) {
   if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only HTTP and HTTPS URLs are allowed.');
 }
 
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Cache-Control': 'no-cache'
-  };
-}
-
-function errorResponse(status, message) {
+function errorResponse(status, message, requestOrigin = '') {
   return {
     statusCode: status,
-    headers: corsHeaders(),
+    headers: corsHeaders(requestOrigin),
     body: JSON.stringify({ error: message })
   };
 }

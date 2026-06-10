@@ -11,28 +11,30 @@ Globals:
         BEDROCK_REGION: eu-west-2
         REQUIRE_PAYMENT: 'false'
         ALLOWED_ORIGIN: 'https://compliance.ishsitotombe.co.uk'
+        # Additional origins handled in code (corsHeaders function)
 
 Resources:
   ComplianceAuditFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../src/lambda/
-      Handler: handler.handler
+      CodeUri: ../src/
+      Handler: lambda/handler.handler
       Policies:
         - AmazonBedrockFullAccess
-      Events:
-        AuditPost:
-          Type: HttpApi
-          Properties:
-            Path: /audit
-            Method: POST
-        AuditOptions:
-          Type: HttpApi
-          Properties:
-            Path: /audit
-            Method: OPTIONS
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - 'https://compliance.ishsitotombe.co.uk'
+            - 'https://ishsitotombe.co.uk'
+            - 'https://www.ishsitotombe.co.uk'
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - content-type
+          MaxAge: 86400
 
 Outputs:
-  AuditApiUrl:
-    Description: 'API Gateway endpoint URL'
-    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/audit'
+  AuditFunctionUrl:
+    Description: 'Lambda Function URL (no 30s API Gateway timeout)'
+    Value: !GetAtt ComplianceAuditFunctionUrl.FunctionUrl
