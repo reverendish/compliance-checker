@@ -15,6 +15,12 @@ out/
 .DS_Store
 *.pem
 repomix-output.xml
+.repomixignore
+.claude/
+
+# AWS SAM build artifacts
+infrastructure/.aws-sam/
+infrastructure/samconfig.toml
 
 # security — credentials and data exports
 *credentials*.csv

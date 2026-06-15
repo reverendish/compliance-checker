@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf /Users/ishsitotombe/Desktop/ish-work/compliance-checker/src/data/*.ts /Users/ishsitotombe/Desktop/ish-work/compliance-checker/src/data/sectors/*.ts && echo \"Removed TypeScript files\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npm install *)",
+      "Bash(sam build *)",
+      "Bash(sam deploy *)",
+      "Bash(cat > *)",
+      "Bash(cp /Users/ishsitotombe/Desktop/ish-work/outreach-agent/package.json /Users/ishsitotombe/Desktop/ish-work/outreach-agent/src/lambda/)",
+      "Bash(cp /Users/ishsitotombe/Desktop/ish-work/outreach-agent/package-lock.json /Users/ishsitotombe/Desktop/ish-work/outreach-agent/src/lambda/)",
+      "Bash(rm -rf /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/search/route.ts /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/officers/route.ts /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/generate/route.ts)",
+      "Bash(rm -rf /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/search /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/officers /Users/ishsitotombe/Desktop/ish-work/outreach-agent/app/generate)"
+    ]
+  }
+}

@@ -8,7 +8,6 @@ Globals:
     Timeout: 300
     Environment:
       Variables:
-        BEDROCK_REGION: eu-west-2
         REQUIRE_PAYMENT: 'false'
         ALLOWED_ORIGIN: 'https://compliance.ishsitotombe.co.uk'
         # Additional origins handled in code (corsHeaders function)
@@ -19,8 +18,6 @@ Resources:
     Properties:
       CodeUri: ../src/
       Handler: lambda/handler.handler
-      Policies:
-        - AmazonBedrockFullAccess
       FunctionUrlConfig:
         AuthType: NONE
 

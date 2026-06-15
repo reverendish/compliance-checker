@@ -77,7 +77,8 @@ export const handler = async (event) => {
       return;
     }
 
-    const { html, ...pageContent } = scraped;
+    const { html } = scraped;
+    const pageContent = scraped; // pass full object (incl. html + privacyText) to auditor
     const { load } = await import('cheerio');
     const $ = load(html);
     const jsShell = detectJsShell(html, $);
