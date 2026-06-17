@@ -27,15 +27,19 @@ function allText(page) {
 // ─────────────────────────────────────────────────────────────────────
 
 function cookie_banner(page) {
-  const src = (page.text || '') + ' ' + (page.html || '');
-  const pass = tm(src, [
+  // Text patterns: visible banner wording in body text
+  const textPass = tm(page.text || '', [
     /we use cookies/i, /this (website|site) uses cookies/i,
     /cookie (consent|notice|banner|preferences|settings)/i,
     /accept (all )?cookies/i, /reject (all )?cookies/i,
     /decline (all )?cookies/i, /manage (cookie )?preferences/i,
+  ]);
+  // HTML patterns: script-loaded CMP platforms (class names, script URLs, global vars)
+  const htmlPass = tm(page.html || '', [
     /cookiebot/i, /onetrust/i, /CookieConsent/i,
     /cookie-consent/i, /cookie-law/i, /gdpr-cookie/i,
   ]);
+  const pass = textPass || htmlPass;
   return { pass, notes: pass ? 'Cookie consent mechanism found.' : 'No cookie consent banner detected. PECR 2003 reg. 6 requires consent before setting non-essential cookies.' };
 }
 
@@ -100,12 +104,14 @@ function marketing_consent(page) {
   const h = page.html || '';
   const hasForm = /<(form|input)/i.test(h);
   if (!hasForm) return { pass: null, notes: 'No sign-up forms detected — marketing consent not applicable.' };
-  const pass = tm(h, [
+  // Consent wording is visible body text — match against page.text only
+  const pass = tm(page.text || '', [
+    /opt.in/i, /consent to.*marketing/i, /agree to receive.*email/i,
     /marketing.*checkbox/i, /checkbox.*market/i,
     /opt.in.*email/i, /email.*opt.in/i,
     /consent.*marketing/i, /marketing.*consent/i,
     /newsletter.*checkbox/i, /I agree to receive/i,
-  ]) || tm(page.text, [/opt.in/i, /consent to.*marketing/i, /agree to receive.*email/i]);
+  ]);
   return { pass, notes: pass ? 'Marketing consent opt-in mechanism found.' : 'Form detected but no clear marketing opt-in found. PECR 2003 reg. 22 requires explicit consent for marketing emails.' };
 }
 
@@ -217,14 +223,15 @@ function misleading_claims(page) {
 function review_disclosure(page) {
   const t = page.text || '';
   const h = page.html || '';
-  const hasReviews =
-    tm(t, [/customer review/i, /testimonial/i, /star rating/i, /\d+(\.\d)?\s*\/\s*5/i]) ||
-    tm(h, [/trustpilot/i, /google.*review/i, /reviews\.co\.uk/i, /feefo/i, /yotpo/i, /bazaarvoice/i, /trustindex/i]);
+  // Review widget platforms are script embeds — detect in HTML only
+  const platformInHtml = tm(h, [/trustpilot/i, /reviews\.co\.uk/i, /feefo/i, /yotpo/i, /bazaarvoice/i, /trustindex/i, /google.*review/i]);
+  // Testimonial/review text is visible content — detect in body text only
+  const reviewInText = tm(t, [/customer review/i, /testimonial/i, /star rating/i, /\d+(\.\d)?\s*\/\s*5/i]);
+  const hasReviews = platformInHtml || reviewInText;
   if (!hasReviews) return { pass: null, notes: 'No customer reviews or testimonials detected.' };
-  const verified = tm(h, [/trustpilot/i, /reviews\.co\.uk/i, /feefo/i, /yotpo/i, /bazaarvoice/i, /trustindex/i, /google.*review/i]);
   return {
-    pass: verified,
-    notes: verified
+    pass: platformInHtml,
+    notes: platformInHtml
       ? 'Reviews appear to come from a verified third-party platform.'
       : 'Reviews found but not from a clearly verified platform. DMCC Act 2024 requires authenticity.',
   };
@@ -737,7 +744,7 @@ function scpn_notification(page) {
 
 function ingredient_labelling(page) {
   const t = page.text || '';
-  const pass = /\bINCI\b/i.test(t) || tm(t, [/ingredients?[\s:]/i]) && /aqua|sodium|glycerin/i.test(t);
+  const pass = /\bINCI\b/i.test(t) || (tm(t, [/ingredients?[\s:]/i]) && /aqua|sodium|glycerin/i.test(t));
   return { pass, notes: pass ? 'Ingredient labelling found on product pages.' : 'No INCI ingredient lists found. UK Cosmetics Regulation requires ingredient labelling.' };
 }
 

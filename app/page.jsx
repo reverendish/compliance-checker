@@ -2,22 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import styles from "./page.module.css";
-
-function useTheme() {
-  const [theme, setTheme] = useState("light");
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") || "light";
-    setTheme(stored);
-    document.documentElement.setAttribute("data-theme", stored);
-  }, []);
-  const toggle = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.setAttribute("data-theme", next);
-  };
-  return { theme, toggle };
-}
+import ThemeToggle from "../components/ThemeToggle";
 
 // PDF generation (client-side only)
 async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, totalFailed, totalNa }) {
@@ -249,7 +234,6 @@ function GroupSection({ groupId, checks, isLoading, isError, errorMessage }) {
 const GROUP_ORDER = ["data_protection", "security_company", "consumer_law", "marketing", "accessibility", "sector_specific"];
 
 export default function ComplianceChecker() {
-  const { theme, toggle } = useTheme();
   const [url, setUrl]           = useState("");
   const [loading, setLoading]   = useState(false);
   const [meta, setMeta]         = useState(null);
@@ -315,7 +299,7 @@ export default function ComplianceChecker() {
           if (chunk.type === "meta") {
             setMeta(chunk);
           } else if (chunk.type === "classified") {
-            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name, batch_ids: chunk.batch_ids }));
+            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name, batch_ids: chunk.batch_ids, total_checks: chunk.total_checks }));
             // Initialise exactly the groups that will run
             if (chunk.batch_ids?.length) {
               const initial = {};
@@ -374,9 +358,7 @@ export default function ComplianceChecker() {
       <nav className={styles.nav}>
         <a href="https://ishsitotombe.co.uk" className={styles.navBrand}>ish</a>
         <div className={styles.navRight}>
-          <button className={styles.themeBtn} onClick={toggle} aria-label="Toggle theme">
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
+          <ThemeToggle />
           <a href="https://ishsitotombe.co.uk" className={styles.navCta}>Get in touch</a>
         </div>
       </nav>

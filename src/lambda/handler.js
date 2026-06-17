@@ -65,8 +65,6 @@ export const handler = async (event) => {
   }
 
   // Build NDJSON stream via async generator
-  const lines = [];
-
   async function* generate() {
     // 1. Scrape
     let scraped;
@@ -96,7 +94,8 @@ export const handler = async (event) => {
     let classification;
     try {
       classification = await classifySector(pageContent);
-    } catch {
+    } catch (e) {
+      console.error('[classifier] Bedrock classification failed:', e?.message ?? e);
       classification = { primary_sector: 'general', secondary_sectors: [], confidence: 'low', flags: {} };
     }
 
@@ -119,9 +118,12 @@ export const handler = async (event) => {
         .catch(e => ({ batch, result: null, error: e.message }))
     );
 
-    // Stream results as each batch resolves
-    for (const promise of batchPromises) {
-      const { batch, result, error } = await promise;
+    // Await all batches (run in parallel, collect in completion order via allSettled)
+    const settled = await Promise.allSettled(batchPromises);
+    for (const outcome of settled) {
+      const { batch, result, error } = outcome.status === 'fulfilled'
+        ? outcome.value
+        : { batch: outcome.reason?.batch, result: null, error: outcome.reason?.message ?? String(outcome.reason) };
       if (error) {
         yield JSON.stringify({ type: 'group_error', group_id: batch.category_id, message: error }) + '\n';
         continue;

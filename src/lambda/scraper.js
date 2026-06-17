@@ -1,13 +1,6 @@
 import { load } from 'cheerio';
 
-const PRIVATE = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|::1|fc00:|fe80:)/;
-
-function validateUrl(url) {
-  const parsed = new URL(url);
-  const host = parsed.hostname;
-  if (PRIVATE.test(host)) throw new Error('Private/internal URLs are not allowed.');
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only HTTP and HTTPS URLs are allowed.');
-}
+const PRIVATE_HOST = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|::1|fc00:|fe80:)/;
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -21,6 +14,15 @@ async function fetchPage(url, timeoutMs = 12000) {
     signal: AbortSignal.timeout(timeoutMs),
     redirect: 'follow',
   });
+  // Re-validate the effective URL after redirects to prevent SSRF via open redirects
+  if (res.url && res.url !== url) {
+    try {
+      const host = new URL(res.url).hostname;
+      if (PRIVATE_HOST.test(host)) throw new Error('Private/internal URLs are not allowed.');
+    } catch (e) {
+      throw new Error(`Redirect target rejected: ${e.message}`);
+    }
+  }
   const html = await res.text();
   return { html, status: res.status, ok: res.ok };
 }
@@ -91,8 +93,6 @@ function parseHtml(html) {
 }
 
 export async function scrape(targetUrl) {
-  validateUrl(targetUrl);
-
   let html = '';
   let fetchWarning = null;
   let httpStatus = null;

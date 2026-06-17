@@ -9,7 +9,9 @@ Globals:
     Environment:
       Variables:
         REQUIRE_PAYMENT: 'false'
+        BEDROCK_REGION: 'eu-west-2'
         ALLOWED_ORIGIN: 'https://compliance.ishsitotombe.co.uk'
+        COMPANIES_HOUSE_API_KEY: !Sub '{{resolve:ssm:/outreach/companies_house_api_key}}'
         # Additional origins handled in code (corsHeaders function)
 
 Resources:
@@ -20,6 +22,14 @@ Resources:
       Handler: lambda/handler.handler
       FunctionUrlConfig:
         AuthType: NONE
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:Converse
+              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.nova-micro-v1:0'
 
 Outputs:
   AuditFunctionUrl:

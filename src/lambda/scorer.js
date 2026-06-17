@@ -1,7 +1,7 @@
 export function calculateScore(allChecks) {
   const applicable = allChecks.filter(c => c.pass !== null);
   if (applicable.length === 0) {
-    return { overall_score: 0, applicable_count: 0, passed_count: 0, failed_count: 0, critical_count: 0 };
+    return { overall_score: 100, applicable_count: 0, passed_count: 0, failed_count: 0, critical_count: 0 };
   }
   const passed = applicable.filter(c => c.pass === true).length;
   const failed = applicable.filter(c => c.pass === false).length;
