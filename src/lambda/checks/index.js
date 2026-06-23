@@ -291,7 +291,7 @@ function product_safety(page) {
   const hasProducts = /product|item|goods|buy|shop/i.test(t);
   if (!hasProducts) return { pass: null, notes: 'No products detected on this page.' };
   const pass = tm(t, [/\bUKCA\b/, /\bCE mark\b/i, /safety (complian|standard|certif)/i, /product safety/i, /\bBSI\b/]);
-  return { pass, notes: pass ? 'Product safety marks or compliance information found.' : 'No product safety marks (UKCA, CE) found. Product Safety and Metrology Regulations 2025 applies.' };
+  return { pass, notes: pass ? 'Product safety marks or compliance information found.' : 'No product safety marks (UKCA, CE) found. General Product Safety Regulations 2005 / Consumer Protection Act 1987 apply.' };
 }
 
 function subscription_clarity(page) {
@@ -498,7 +498,7 @@ function tobacco_regulations(page) {
 function avaa_2023_compliance(page) {
   const t = page.text || '';
   const pass = tm(t, [/age verification/i, /Yoti/i, /Incode/i, /AgeID/i, /certified.*verification/i, /robust.*age/i]);
-  return { pass, notes: pass ? 'Certified age verification found.' : 'No certified age verification provider found. Age Verification and Assurance Act 2023 may apply.' };
+  return { pass, notes: pass ? 'Certified age verification found.' : 'No certified age verification provider found. Online Safety Act 2023 Part 5 may apply.' };
 }
 
 function restricted_product_list(page) {
@@ -526,7 +526,7 @@ function motor_finance_fca(page) {
 function day30_rejection_right(page) {
   const t = allText(page);
   const pass = tm(t, [/30.day/i, /thirty.day/i, /right to reject/i]);
-  return { pass, notes: pass ? '30-day rejection right mentioned.' : 'No 30-day right to reject found. Consumer Rights Act 2015 s.48C requires this for used car sales.' };
+  return { pass, notes: pass ? '30-day rejection right mentioned.' : 'No 30-day right to reject found. Consumer Rights Act 2015 s.22 requires this for used car sales.' };
 }
 
 function used_car_disclosure(page) {
