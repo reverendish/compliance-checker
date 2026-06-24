@@ -5,7 +5,7 @@ export const metadata = {
   description: "Full UK legal audit — GDPR, PECR, Companies Act, Consumer Rights Act, and more. Up to 260 checks across 21 industry categories.",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>

@@ -5,11 +5,15 @@ import styles from "./page.module.css";
 import ThemeToggle from "../components/ThemeToggle";
 
 // PDF generation (client-side only)
-async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, totalFailed, totalNa }) {
+async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, totalFailed, totalNa }: {
+  siteName: string; sector_name: string; url: string;
+  groups: Record<string, { checks: any[]; done: boolean; error: string | null }>;
+  totalPassed: number; totalFailed: number; totalNa: number;
+}) {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc: any = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 16;
   let y = margin;
@@ -58,7 +62,7 @@ async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, to
   doc.rect(margin + passW + failW, y, naW, barH, "F");
   // legend
   y += barH + 5;
-  const dot = (cx, col) => { doc.setFillColor(...col); doc.circle(cx, y - 1.5, 2, "F"); };
+  const dot = (cx: number, col: [number, number, number]) => { doc.setFillColor(...col); doc.circle(cx, y - 1.5, 2, "F"); };
   dot(margin + 2, [22, 163, 74]);
   doc.setFontSize(8); doc.setTextColor(17, 24, 39);
   doc.text(`${totalPassed} passed`, margin + 6, y);
@@ -71,7 +75,7 @@ async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, to
   y += 8;
 
   // ── Per-group tables ───────────────────────────────────────────────────────
-  const GROUP_META = {
+  const GROUP_META: Record<string, { label: string }> = {
     data_protection:  { label: "Data Protection & Privacy" },
     security_company: { label: "Security & Company Info" },
     consumer_law:     { label: "Consumer Law" },
@@ -117,20 +121,20 @@ async function downloadPDF({ siteName, sector_name, url, groups, totalPassed, to
       },
       didParseCell(data) {
         if (data.column.index === 0 && data.section === "body") {
-          const val = data.cell.raw;
+          const val = String(data.cell.raw ?? '');
           if (val.startsWith("✓")) data.cell.styles.textColor = [22, 163, 74];
           else if (val.startsWith("✗")) data.cell.styles.textColor = [185, 28, 28];
           else data.cell.styles.textColor = [100, 100, 100];
         }
         if (data.column.index === 3 && data.section === "body") {
-          const v = data.cell.raw.toLowerCase();
+          const v = String(data.cell.raw ?? '').toLowerCase();
           if (v === "high")   data.cell.styles.textColor = [185, 28, 28];
           if (v === "medium") data.cell.styles.textColor = [180, 83, 9];
         }
       },
-      didDrawPage(data) { y = data.cursor.y; },
+      didDrawPage(data: any) { y = data.cursor.y; },
     });
-    y = doc.lastAutoTable.finalY + 6;
+    y = (doc as any).lastAutoTable.finalY + 6;
   }
 
   // ── Footer ────────────────────────────────────────────────────────────────
@@ -156,13 +160,13 @@ const EXAMPLES = [
   { label: 'Purplebricks', url: 'https://www.purplebricks.co.uk' },
 ];
 
-const SEVERITY = {
+const SEVERITY: Record<string, { label: string; cls: string }> = {
   high:   { label: "High",   cls: "sevHigh"   },
   medium: { label: "Medium", cls: "sevMedium" },
   low:    { label: "Low",    cls: "sevLow"    },
 };
 
-const GROUP_META = {
+const GROUP_META: Record<string, { icon: string; label: string }> = {
   data_protection:  { icon: "🔒", label: "Data Protection & Privacy" },
   security_company: { icon: "🏢", label: "Security & Company Info" },
   consumer_law:     { icon: "⚖️",  label: "Consumer Law" },
@@ -172,7 +176,7 @@ const GROUP_META = {
 };
 
 
-function CheckRow({ check, delay }) {
+function CheckRow({ check, delay }: { check: any; delay: number }) {
   const pass = check.pass;
   let statusCls, statusIcon, borderColor;
   if (pass === true)       { statusCls = "statusPass"; statusIcon = "✓"; borderColor = "#1a7a4a"; }
@@ -196,7 +200,9 @@ function CheckRow({ check, delay }) {
   );
 }
 
-function GroupSection({ groupId, checks, isLoading, isError, errorMessage }) {
+function GroupSection({ groupId, checks, isLoading, isError, errorMessage }: {
+  groupId: string; checks: any[]; isLoading: boolean; isError: boolean; errorMessage: string | null;
+}) {
   const meta  = GROUP_META[groupId] || { icon: "•", label: groupId };
   const passed = checks.filter(c => c.pass === true).length;
   const failed = checks.filter(c => c.pass === false).length;
@@ -236,19 +242,19 @@ const GROUP_ORDER = ["data_protection", "security_company", "consumer_law", "mar
 export default function ComplianceChecker() {
   const [url, setUrl]           = useState("");
   const [loading, setLoading]   = useState(false);
-  const [meta, setMeta]         = useState(null);
-  const [groups, setGroups]     = useState({});
+  const [meta, setMeta]         = useState<any>(null);
+  const [groups, setGroups]     = useState<Record<string, any>>({});
   const [auditDone, setAuditDone] = useState(false);
   const [error, setError]       = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const abortRef = useRef(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = () => {
     abortRef.current?.abort();
     setMeta(null); setGroups({}); setAuditDone(false); setError(null); setUrl("");
   };
 
-  const audit = async (target) => {
+  const audit = async (target?: string) => {
     let u = (target || url).trim();
     if (!u) return;
     if (!u.startsWith("http")) u = "https://" + u;
@@ -267,7 +273,7 @@ export default function ComplianceChecker() {
     setGroups({});
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_AUDIT_API_URL, {
+      const res = await fetch(process.env.NEXT_PUBLIC_AUDIT_API_URL!, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: u }),
@@ -279,7 +285,7 @@ export default function ComplianceChecker() {
         throw new Error(data.error || "Something went wrong.");
       }
 
-      const reader  = res.body.getReader();
+      const reader  = res.body!.getReader();
       const decoder = new TextDecoder();
       let   buffer  = "";
 
@@ -289,7 +295,7 @@ export default function ComplianceChecker() {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        buffer = lines.pop(); // keep incomplete last line
+        buffer = lines.pop() ?? ''; // keep incomplete last line
 
         for (const line of lines) {
           if (!line.trim()) continue;
@@ -299,11 +305,11 @@ export default function ComplianceChecker() {
           if (chunk.type === "meta") {
             setMeta(chunk);
           } else if (chunk.type === "classified") {
-            setMeta(prev => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name, batch_ids: chunk.batch_ids, total_checks: chunk.total_checks }));
+            setMeta((prev: any) => ({ ...prev, sector: chunk.sector, sector_name: chunk.sector_name, batch_ids: chunk.batch_ids, total_checks: chunk.total_checks }));
             // Initialise exactly the groups that will run
             if (chunk.batch_ids?.length) {
-              const initial = {};
-              chunk.batch_ids.forEach(id => { initial[id] = { checks: [], done: false, error: null }; });
+              const initial: Record<string, any> = {};
+              chunk.batch_ids.forEach((id: string) => { initial[id] = { checks: [], done: false, error: null }; });
               setGroups(initial);
             }
           } else if (chunk.type === "group") {
@@ -321,7 +327,7 @@ export default function ComplianceChecker() {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       if (e.name !== "AbortError") setError(e.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
