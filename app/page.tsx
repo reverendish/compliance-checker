@@ -375,8 +375,12 @@ export default function ComplianceChecker() {
           <span className={styles.tag}>Free tool · UK compliance</span>
           <h1 className={styles.heading}>Website compliance checker</h1>
           <p className={styles.subheading}>
-            Full UK legal audit — GDPR, PECR, Companies Act, Consumer Rights Act, and more.
-            Up to 260 checks across 21 industry categories. Results in under a minute.
+            Full UK legal audit: GDPR, PECR, Companies Act, Consumer Rights Act, and more.
+            Up to 178 checks across 21 industry categories. Results in under a minute.
+          </p>
+          <p className={styles.disclaimer}>
+            Results are indicative, not legal advice. Scans publicly visible HTML only,
+            consult a solicitor for compliance disputes.
           </p>
         </div>
 
@@ -468,7 +472,13 @@ export default function ComplianceChecker() {
               </div>
             </div>
 
-            {/* Warnings */}
+            {/* Info / Warnings */}
+            {meta?.was_rendered && (
+              <div className={styles.infoCard}>
+                <span className={styles.infoIcon}>ℹ</span>
+                <p>This site loads content with JavaScript. We rendered the full page before running checks, so these results reflect what visitors actually see.</p>
+              </div>
+            )}
             {meta?.js_shell && (
               <div className={styles.warningCard}>
                 <span className={styles.warningIcon}>⚠</span>
